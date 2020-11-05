@@ -1,0 +1,43 @@
+# Fe
+
+variable        i equal 0
+variable		iteration equal 40
+variable        n loop ${iteration}
+label           loopn
+
+variable        i equal $i+1
+print           "loop number is $i"
+if              "$i==1" then "shell rm data"
+
+variable		delta equal 0.001
+boundary		p p p
+units			metal
+atom_style		atomic
+timestep		0.005
+
+variable		Lattice_Guess equal 2.855
+variable		spacing equal ${Lattice_Guess}+${delta}*($i-${iteration}/2)
+lattice			bcc ${spacing}
+region			box block 0 3 0 3 0 3
+create_box		1 box
+create_atoms	1 box
+
+pair_style      eam/alloy
+pair_coeff      * * Fe_mm.eam.fs Fe
+
+run             0
+
+variable        PotentialEnergy equal pe
+variable        Natoms equal atoms
+variable        E_per_Atom equal ${PotentialEnergy}/${Natoms}
+variable        Volume equal ${spacing}^3/2
+variable        Middle equal ${iteration}/2      
+  
+if           	"$i == ${Middle}" then "dump 1 all custom 1000 dump.${Middle} mass type xs ys zs"
+fix             extra all print 1 "${spacing} ${Volume} ${E_per_Atom}" append data
+run            	1
+
+clear
+next            n
+jump            in.lattice loopn
+
